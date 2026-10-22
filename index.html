@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="Adicione o vencimento do seu boleto ao calendário."
+  >
+
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Agendar vencimento do boleto</title>
+
+  <style>
+    :root {
+      --cor-principal: #0057b8;
+      --cor-principal-hover: #004494;
+      --cor-texto: #1f2937;
+      --cor-secundaria: #6b7280;
+      --cor-fundo: #f3f6f9;
+      --cor-card: #ffffff;
+      --cor-borda: #e5e7eb;
+      --cor-erro: #b91c1c;
+      --cor-aviso: #92400e;
+      --cor-aviso-fundo: #fffbeb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--cor-texto);
+      background: var(--cor-fundo);
+    }
+
+    .card {
+      width: 100%;
+      max-width: 440px;
+      padding: 32px 24px;
+      text-align: center;
+      background: var(--cor-card);
+      border: 1px solid var(--cor-borda);
+      border-radius: 18px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+    }
+
+    .icone {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      background: #e8f1fc;
+      font-size: 32px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+
+    .descricao {
+      margin: 0;
+      color: var(--cor-secundaria);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .data-label {
+      margin-top: 28px;
+      color: var(--cor-secundaria);
+      font-size: 14px;
+    }
+
+    .data {
+      margin-top: 8px;
+      color: var(--cor-principal);
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    .botao {
+      width: 100%;
+      min-height: 54px;
+      margin-top: 28px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 12px;
+      background: var(--cor-principal);
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+    }
+
+    .botao:hover {
+      background: var(--cor-principal-hover);
+      transform: translateY(-1px);
+    }
+
+    .botao:focus {
+      outline: 3px solid rgba(0, 87, 184, 0.25);
+      outline-offset: 3px;
+    }
+
+    .aviso {
+      margin-top: 22px;
+      padding: 14px;
+      border-radius: 10px;
+      background: var(--cor-aviso-fundo);
+      color: var(--cor-aviso);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .informacao {
+      margin: 20px 0 0;
+      color: var(--cor-secundaria);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .erro {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 10px;
+      background: #fef2f2;
+      color: var(--cor-erro);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .oculto {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <div class="icone" aria-hidden="true">📅</div>
+
+    <h1>Agendar vencimento</h1>
+
+    <p class="descricao">
+      Adicione um lembrete do vencimento do seu boleto ao calendário.
+    </p>
+
+    <section id="resultado" class="oculto">
+      <div class="data-label">Data do vencimento</div>
+
+      <div id="dataExibicao" class="data"></div>
+
+      <a
+        id="botaoCalendario"
+        class="botao"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Adicionar ao Google Agenda
+      </a>
+
+      <div id="avisoVencido" class="aviso oculto">
+        Atenção: esta data de vencimento já passou. O lembrete será
+        adicionado com a data original informada na mensagem.
+      </div>
+
+      <p class="informacao">
+        Ao continuar, será aberta uma tela para você conferir e salvar
+        o lembrete. Esta página não realiza pagamentos e não altera
+        o vencimento do boleto.
+      </p>
+    </section>
+
+    <section id="mensagemErro" class="erro oculto">
+      Não foi possível identificar a data de vencimento. Verifique se
+      o endereço recebido está completo.
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    function adicionarZero(numero) {
+      return String(numero).padStart(2, "0");
+    }
+
+    function escaparHtml(texto) {
+      const elemento = document.createElement("div");
+      elemento.textContent = texto;
+      return elemento.innerHTML;
+    }
+
+    function obterCodigoDaUrl() {
+      /*
+       * Formato principal:
+       * https://seuusuario.github.io/a/#261030
+       *
+       * Também aceita:
+       * https://seuusuario.github.io/a/?d=261030
+       */
+
+      const codigoHash = window.location.hash
+        .replace("#", "")
+        .trim();
+
+      if (codigoHash) {
+        return codigoHash;
+      }
+
+      const parametros = new URLSearchParams(
+        window.location.search
+      );
+
+      return (parametros.get("d") || "").trim();
+    }
+
+    function interpretarData(codigo) {
+      /*
+       * Formato esperado: AAMMDD
+       *
+       * Exemplo:
+       * 261030 = 30/10/2026
+       */
+
+      if (!/^\d{6}$/.test(codigo)) {
+        return null;
+      }
+
+      const ano = 2000 + Number(codigo.substring(0, 2));
+      const mes = Number(codigo.substring(2, 4));
+      const dia = Number(codigo.substring(4, 6));
+
+      const data = new Date(
+        ano,
+        mes - 1,
+        dia,
+        12,
+        0,
+        0
+      );
+
+      const dataConfere =
+        data.getFullYear() === ano &&
+        data.getMonth() === mes - 1 &&
+        data.getDate() === dia;
+
+      if (!dataConfere) {
+        return null;
+      }
+
+      return {
+        ano,
+        mes,
+        dia,
+        data
+      };
+    }
+
+    function formatarDataGoogle(ano, mes, dia) {
+      return (
+        String(ano) +
+        adicionarZero(mes) +
+        adicionarZero(dia)
+      );
+    }
+
+    function obterDiaSeguinte(ano, mes, dia) {
+      const dataSeguinte = new Date(
+        ano,
+        mes - 1,
+        dia + 1,
+        12,
+        0,
+        0
+      );
+
+      return {
+        ano: dataSeguinte.getFullYear(),
+        mes: dataSeguinte.getMonth() + 1,
+        dia: dataSeguinte.getDate()
+      };
+    }
+
+    function formatarDataBrasileira(ano, mes, dia) {
+      return (
+        adicionarZero(dia) +
+        "/" +
+        adicionarZero(mes) +
+        "/" +
+        String(ano)
+      );
+    }
+
+    function montarUrlCalendario(dataVencimento) {
+      const diaSeguinte = obterDiaSeguinte(
+        dataVencimento.ano,
+        dataVencimento.mes,
+        dataVencimento.dia
+      );
+
+      const inicio = formatarDataGoogle(
+        dataVencimento.ano,
+        dataVencimento.mes,
+        dataVencimento.dia
+      );
+
+      const fim = formatarDataGoogle(
+        diaSeguinte.ano,
+        diaSeguinte.mes,
+        diaSeguinte.dia
+      );
+
+      const parametros = new URLSearchParams({
+        action: "TEMPLATE",
+        text: "Vencimento do boleto",
+        dates: inicio + "/" + fim,
+        details:
+          "Lembrete da data de vencimento do seu boleto.",
+        ctz: "America/Sao_Paulo"
+      });
+
+      return (
+        "https://calendar.google.com/calendar/render?" +
+        parametros.toString()
+      );
+    }
+
+    function vencimentoJaPassou(dataVencimento) {
+      const hoje = new Date();
+
+      hoje.setHours(0, 0, 0, 0);
+
+      const vencimento = new Date(
+        dataVencimento.ano,
+        dataVencimento.mes - 1,
+        dataVencimento.dia
+      );
+
+      vencimento.setHours(0, 0, 0, 0);
+
+      return vencimento < hoje;
+    }
+
+    function mostrarErro() {
+      document
+        .getElementById("resultado")
+        .classList.add("oculto");
+
+      document
+        .getElementById("mensagemErro")
+        .classList.remove("oculto");
+    }
+
+    function carregarPagina() {
+      const codigo = obterCodigoDaUrl();
+      const dataVencimento = interpretarData(codigo);
+
+      if (!dataVencimento) {
+        mostrarErro();
+        return;
+      }
+
+      const dataFormatada = formatarDataBrasileira(
+        dataVencimento.ano,
+        dataVencimento.mes,
+        dataVencimento.dia
+      );
+
+      const urlCalendario =
+        montarUrlCalendario(dataVencimento);
+
+      document.getElementById(
+        "dataExibicao"
+      ).textContent = escaparHtml(dataFormatada);
+
+      document.getElementById(
+        "botaoCalendario"
+      ).href = urlCalendario;
+
+      if (vencimentoJaPassou(dataVencimento)) {
+        document
+          .getElementById("avisoVencido")
+          .classList.remove("oculto");
+      }
+
+      document
+        .getElementById("resultado")
+        .classList.remove("oculto");
+    }
+
+    carregarPagina();
+  </script>
+</body>
+</html>
