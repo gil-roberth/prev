@@ -127,6 +127,17 @@
       outline-offset: 3px;
     }
 
+    .botao-secundario {
+      margin-top: 12px;
+      background: #ffffff;
+      color: var(--cor-principal);
+      border: 1px solid var(--cor-principal);
+    }
+
+    .botao-secundario:hover {
+      background: #f0f6ff;
+    }
+
     .aviso {
       margin-top: 22px;
       padding: 14px;
@@ -135,6 +146,17 @@
       color: var(--cor-aviso);
       font-size: 13px;
       line-height: 1.5;
+    }
+
+    .orientacao {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #eff6ff;
+      color: #1e3a5f;
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: left;
     }
 
     .informacao {
@@ -180,11 +202,26 @@
         id="botaoCalendario"
         class="botao"
         href="#"
+      >
+        Adicionar ao calendário
+      </a>
+
+      <a
+        id="botaoAlternativo"
+        class="botao botao-secundario oculto"
+        href="#"
         target="_blank"
         rel="noopener noreferrer"
       >
-        Adicionar ao Google Agenda
+        Usar Google Agenda
       </a>
+
+      <div id="orientacaoIOS" class="orientacao oculto">
+        <strong>Como adicionar no iPhone:</strong><br>
+        Após tocar no botão, abra o arquivo baixado e escolha
+        “Adicionar” ou “Adicionar Tudo”. Se necessário, abra o
+        arquivo pelo aplicativo Arquivos, na pasta Downloads.
+      </div>
 
       <div id="avisoVencido" class="aviso oculto">
         Atenção: esta data de vencimento já passou. O lembrete será
@@ -192,9 +229,8 @@
       </div>
 
       <p class="informacao">
-        Ao continuar, será aberta uma tela para você conferir e salvar
-        o lembrete. Esta página não realiza pagamentos e não altera
-        o vencimento do boleto.
+        Esta página cria apenas um lembrete. Ela não realiza
+        pagamentos e não altera o vencimento do boleto.
       </p>
     </section>
 
@@ -207,23 +243,19 @@
   <script>
     "use strict";
 
+    let urlArquivoICS = null;
+
     function adicionarZero(numero) {
       return String(numero).padStart(2, "0");
-    }
-
-    function escaparHtml(texto) {
-      const elemento = document.createElement("div");
-      elemento.textContent = texto;
-      return elemento.innerHTML;
     }
 
     function obterCodigoDaUrl() {
       /*
        * Formato principal:
-       * https://seuusuario.github.io/a/#261030
+       * https://seuusuario.github.io/repositorio/#261030
        *
        * Também aceita:
-       * https://seuusuario.github.io/a/?d=261030
+       * https://seuusuario.github.io/repositorio/?d=261030
        */
 
       const codigoHash = window.location.hash
@@ -318,7 +350,27 @@
       );
     }
 
-    function montarUrlCalendario(dataVencimento) {
+    function detectarIOS() {
+      const agente = navigator.userAgent || "";
+      const plataforma = navigator.platform || "";
+      const pontosToque = navigator.maxTouchPoints || 0;
+
+      const dispositivoIOS =
+        /iPhone|iPad|iPod/i.test(agente);
+
+      /*
+       * Alguns iPads modernos se identificam como Mac.
+       * A presença de múltiplos pontos de toque ajuda a
+       * reconhecer o iPadOS.
+       */
+      const iPadComoMac =
+        plataforma === "MacIntel" &&
+        pontosToque > 1;
+
+      return dispositivoIOS || iPadComoMac;
+    }
+
+    function montarUrlGoogle(dataVencimento) {
       const diaSeguinte = obterDiaSeguinte(
         dataVencimento.ano,
         dataVencimento.mes,
@@ -350,6 +402,127 @@
         "https://calendar.google.com/calendar/render?" +
         parametros.toString()
       );
+    }
+
+    function montarConteudoICS(dataVencimento) {
+      const diaSeguinte = obterDiaSeguinte(
+        dataVencimento.ano,
+        dataVencimento.mes,
+        dataVencimento.dia
+      );
+
+      const inicio = formatarDataGoogle(
+        dataVencimento.ano,
+        dataVencimento.mes,
+        dataVencimento.dia
+      );
+
+      const fim = formatarDataGoogle(
+        diaSeguinte.ano,
+        diaSeguinte.mes,
+        diaSeguinte.dia
+      );
+
+      /*
+       * DTSTAMP representa o momento em que o arquivo foi criado.
+       * O evento é configurado como evento de dia inteiro.
+       */
+      const agora = new Date();
+
+      const dtstamp =
+        agora.getUTCFullYear() +
+        adicionarZero(agora.getUTCMonth() + 1) +
+        adicionarZero(agora.getUTCDate()) +
+        "T" +
+        adicionarZero(agora.getUTCHours()) +
+        adicionarZero(agora.getUTCMinutes()) +
+        adicionarZero(agora.getUTCSeconds()) +
+        "Z";
+
+      const uid =
+        "boleto-" +
+        inicio +
+        "-" +
+        Math.random().toString(36).substring(2, 10) +
+        "@lembrete";
+
+      /*
+       * O padrão ICS utiliza quebra de linha CRLF.
+       * O VALARM cria um aviso às 9h do dia do vencimento.
+       */
+      const linhas = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Lembrete de Vencimento//PT-BR",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        "UID:" + uid,
+        "DTSTAMP:" + dtstamp,
+        "DTSTART;VALUE=DATE:" + inicio,
+        "DTEND;VALUE=DATE:" + fim,
+        "SUMMARY:Vencimento do boleto",
+        "DESCRIPTION:Lembrete da data de vencimento do seu boleto.",
+        "TRANSP:TRANSPARENT",
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM",
+        "TRIGGER:PT9H",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Seu boleto vence hoje",
+        "END:VALARM",
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ];
+
+      return linhas.join("\r\n");
+    }
+
+    function criarArquivoICS(dataVencimento) {
+      const conteudoICS =
+        montarConteudoICS(dataVencimento);
+
+      const arquivo = new Blob(
+        [conteudoICS],
+        {
+          type: "text/calendar;charset=utf-8"
+        }
+      );
+
+      return URL.createObjectURL(arquivo);
+    }
+
+    function configurarCalendarioIOS(dataVencimento) {
+      const botaoPrincipal =
+        document.getElementById("botaoCalendario");
+
+      const botaoAlternativo =
+        document.getElementById("botaoAlternativo");
+
+      urlArquivoICS = criarArquivoICS(dataVencimento);
+
+      botaoPrincipal   montarUrlGoogle(dataVencimento);
+
+      botaoAlternativo.classList.remove("oculto");
+
+      document
+        .getElementById("orientacaoIOS")
+        .classList.remove("oculto");
+    }
+
+    function configurarGoogleAgenda(dataVencimento) {
+      const botaoPrincipal =
+        document.getElementById("botaoCalendario");
+
+      botaoPrincipal.textContent =
+        "Adicionar ao Google Agenda";
+
+      botaoPrincipal.href =
+        montarUrlGoogle(dataVencimento);
+
+      botaoPrincipal.target = "_blank";
+
+      botaoPrincipal.rel =
+        "noopener noreferrer";
     }
 
     function vencimentoJaPassou(dataVencimento) {
@@ -393,16 +566,15 @@
         dataVencimento.dia
       );
 
-      const urlCalendario =
-        montarUrlCalendario(dataVencimento);
-
       document.getElementById(
         "dataExibicao"
-      ).textContent = escaparHtml(dataFormatada);
+      ).textContent = dataFormatada;
 
-      document.getElementById(
-        "botaoCalendario"
-      ).href = urlCalendario;
+      if (detectarIOS()) {
+        configurarCalendarioIOS(dataVencimento);
+      } else {
+        configurarGoogleAgenda(dataVencimento);
+      }
 
       if (vencimentoJaPassou(dataVencimento)) {
         document
@@ -414,6 +586,15 @@
         .getElementById("resultado")
         .classList.remove("oculto");
     }
+
+    /*
+     * Libera o endereço temporário do arquivo ao fechar a página.
+     */
+    window.addEventListener("beforeunload", function () {
+      if (urlArquivoICS) {
+        URL.revokeObjectURL(urlArquivoICS);
+      }
+    });
 
     carregarPagina();
   </script>
