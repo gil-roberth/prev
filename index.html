@@ -210,17 +210,15 @@
         id="botaoAlternativo"
         class="botao botao-secundario oculto"
         href="#"
-        target="_blank"
-        rel="noopener noreferrer"
       >
-        Usar Google Agenda
+        Usar outro calendário
       </a>
 
       <div id="orientacaoIOS" class="orientacao oculto">
         <strong>Como adicionar no iPhone:</strong><br>
-        Após tocar no botão, abra o arquivo baixado e escolha
-        “Adicionar” ou “Adicionar Tudo”. Se necessário, abra o
-        arquivo pelo aplicativo Arquivos, na pasta Downloads.
+        Toque no botão acima. Caso o arquivo seja baixado, abra-o
+        pelo aplicativo Arquivos, na pasta Downloads, e escolha
+        “Adicionar” ou “Adicionar Tudo”.
       </div>
 
       <div id="avisoVencido" class="aviso oculto">
@@ -250,14 +248,6 @@
     }
 
     function obterCodigoDaUrl() {
-      /*
-       * Formato principal:
-       * https://seuusuario.github.io/repositorio/#261030
-       *
-       * Também aceita:
-       * https://seuusuario.github.io/repositorio/?d=261030
-       */
-
       const codigoHash = window.location.hash
         .replace("#", "")
         .trim();
@@ -274,13 +264,6 @@
     }
 
     function interpretarData(codigo) {
-      /*
-       * Formato esperado: AAMMDD
-       *
-       * Exemplo:
-       * 261030 = 30/10/2026
-       */
-
       if (!/^\d{6}$/.test(codigo)) {
         return null;
       }
@@ -315,7 +298,7 @@
       };
     }
 
-    function formatarDataGoogle(ano, mes, dia) {
+    function formatarDataCalendario(ano, mes, dia) {
       return (
         String(ano) +
         adicionarZero(mes) +
@@ -358,16 +341,21 @@
       const dispositivoIOS =
         /iPhone|iPad|iPod/i.test(agente);
 
-      /*
-       * Alguns iPads modernos se identificam como Mac.
-       * A presença de múltiplos pontos de toque ajuda a
-       * reconhecer o iPadOS.
-       */
       const iPadComoMac =
         plataforma === "MacIntel" &&
         pontosToque > 1;
 
       return dispositivoIOS || iPadComoMac;
+    }
+
+    function detectarMac() {
+      const plataforma = navigator.platform || "";
+      const agente = navigator.userAgent || "";
+
+      return (
+        /Mac/i.test(plataforma) ||
+        /Macintosh/i.test(agente)
+      );
     }
 
     function montarUrlGoogle(dataVencimento) {
@@ -377,13 +365,13 @@
         dataVencimento.dia
       );
 
-      const inicio = formatarDataGoogle(
+      const inicio = formatarDataCalendario(
         dataVencimento.ano,
         dataVencimento.mes,
         dataVencimento.dia
       );
 
-      const fim = formatarDataGoogle(
+      const fim = formatarDataCalendario(
         diaSeguinte.ano,
         diaSeguinte.mes,
         diaSeguinte.dia
@@ -411,22 +399,18 @@
         dataVencimento.dia
       );
 
-      const inicio = formatarDataGoogle(
+      const inicio = formatarDataCalendario(
         dataVencimento.ano,
         dataVencimento.mes,
         dataVencimento.dia
       );
 
-      const fim = formatarDataGoogle(
+      const fim = formatarDataCalendario(
         diaSeguinte.ano,
         diaSeguinte.mes,
         diaSeguinte.dia
       );
 
-      /*
-       * DTSTAMP representa o momento em que o arquivo foi criado.
-       * O evento é configurado como evento de dia inteiro.
-       */
       const agora = new Date();
 
       const dtstamp =
@@ -442,14 +426,8 @@
       const uid =
         "boleto-" +
         inicio +
-        "-" +
-        Math.random().toString(36).substring(2, 10) +
-        "@lembrete";
+        "@gil-roberth.github.io";
 
-      /*
-       * O padrão ICS utiliza quebra de linha CRLF.
-       * O VALARM cria um aviso às 9h do dia do vencimento.
-       */
       const linhas = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -466,7 +444,7 @@
         "TRANSP:TRANSPARENT",
         "STATUS:CONFIRMED",
         "BEGIN:VALARM",
-        "TRIGGER:PT9H",
+        "TRIGGER:-PT9H",
         "ACTION:DISPLAY",
         "DESCRIPTION:Seu boleto vence hoje",
         "END:VALARM",
@@ -491,43 +469,96 @@
       return URL.createObjectURL(arquivo);
     }
 
-    function configurarCalendarioIOS(dataVencimento) {
-      const botaoPrincipal =
-        document.getElementById("botaoCalendario");
+    function prepararBotaoICS(
+      botao,
+      dataVencimento,
+      texto
+    ) {
+      if (!urlArquivoICS) {
+        urlArquivoICS =
+          criarArquivoICS(dataVencimento);
+      }
 
-      const botaoAlternativo =
-        document.getElementById("botaoAlternativo");
+      botao.textContent = texto;
+      botao.href = urlArquivoICS;
+      botao.setAttribute(
+        "download",
+        "vencimento-boleto.ics"
+      );
 
-      urlArquivoICS = criarArquivoICS(dataVencimento);
-
-      botaoPrincipal   montarUrlGoogle(dataVencimento);
-
-      botaoAlternativo.classList.remove("oculto");
-
-      document
-        .getElementById("orientacaoIOS")
-        .classList.remove("oculto");
+      botao.removeAttribute("target");
+      botao.removeAttribute("rel");
     }
 
-    function configurarGoogleAgenda(dataVencimento) {
-      const botaoPrincipal =
-        document.getElementById("botaoCalendario");
+    function prepararBotaoGoogle(
+      botao,
+      dataVencimento,
+      texto
+    ) {
+      botao.textContent = texto;
+      botao.href = montarUrlGoogle(dataVencimento);
+      botao.target = "_blank";
+      botao.rel = "noopener noreferrer";
+      botao.nst botaoAlternativo =
+        document.getElementById("botaoAlternativo");
 
-      botaoPrincipal.textContent =
-        "Adicionar ao Google Agenda";
+      if (detectarIOS()) {
+        prepararBotaoICS(
+          botaoPrincipal,
+          dataVencimento,
+          "Adicionar ao Calendário do iPhone"
+        );
 
-      botaoPrincipal.href =
-        montarUrlGoogle(dataVencimento);
+        prepararBotaoGoogle(
+          botaoAlternativo,
+          dataVencimento,
+          "Usar Google Agenda"
+        );
 
-      botaoPrincipal.target = "_blank";
+        botaoAlternativo.classList.remove("oculto");
 
-      botaoPrincipal.rel =
-        "noopener noreferrer";
+        document
+          .getElementById("orientacaoIOS")
+          .classList.remove("oculto");
+
+        return;
+      }
+
+      if (detectarMac()) {
+        prepararBotaoICS(
+          botaoPrincipal,
+          dataVencimento,
+          "Adicionar ao Calendário da Apple"
+        );
+
+        prepararBotaoGoogle(
+          botaoAlternativo,
+          dataVencimento,
+          "Usar Google Agenda"
+        );
+
+        botaoAlternativo.classList.remove("oculto");
+
+        return;
+      }
+
+      prepararBotaoGoogle(
+        botaoPrincipal,
+        dataVencimento,
+        "Adicionar ao Google Agenda"
+      );
+
+      prepararBotaoICS(
+        botaoAlternativo,
+        dataVencimento,
+        "Usar Outlook ou outro calendário"
+      );
+
+      botaoAlternativo.classList.remove("oculto");
     }
 
     function vencimentoJaPassou(dataVencimento) {
       const hoje = new Date();
-
       hoje.setHours(0, 0, 0, 0);
 
       const vencimento = new Date(
@@ -570,11 +601,7 @@
         "dataExibicao"
       ).textContent = dataFormatada;
 
-      if (detectarIOS()) {
-        configurarCalendarioIOS(dataVencimento);
-      } else {
-        configurarGoogleAgenda(dataVencimento);
-      }
+      configurarCalendarios(dataVencimento);
 
       if (vencimentoJaPassou(dataVencimento)) {
         document
@@ -587,9 +614,6 @@
         .classList.remove("oculto");
     }
 
-    /*
-     * Libera o endereço temporário do arquivo ao fechar a página.
-     */
     window.addEventListener("beforeunload", function () {
       if (urlArquivoICS) {
         URL.revokeObjectURL(urlArquivoICS);
