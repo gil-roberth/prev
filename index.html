@@ -3,60 +3,321 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Adicione o vencimento do seu boleto ao calendário.">
+  <meta name="description" content="Adicione um lembrete do vencimento do boleto do seu acordo ao calendário.">
   <meta name="robots" content="noindex, nofollow">
-  <title>Agendar vencimento do boleto</title>
+  <meta name="theme-color" content="#203b63">
+  <title>Lembrete de vencimento do boleto</title>
   <style>
-    :root{--azul:#0057b8;--azul-hover:#004494;--texto:#1f2937;--secundaria:#6b7280;--fundo:#f3f6f9;--borda:#e5e7eb;--erro:#b91c1c;--aviso:#92400e;--aviso-fundo:#fffbeb}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;padding:24px;display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;color:var(--texto);background:var(--fundo)}
-    .card{width:100%;max-width:440px;padding:32px 24px;text-align:center;background:#fff;border:1px solid var(--borda);border-radius:18px;box-shadow:0 12px 35px rgba(0,0,0,.08)}
-    .icone{width:64px;height:64px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;border-radius:18px;background:#e8f1fc;font-size:32px}
-    h1{margin:0 0 12px;font-size:24px;line-height:1.25}
-    .descricao{margin:0;color:var(--secundaria);font-size:16px;line-height:1.5}
-    .data-label{margin-top:28px;color:var(--secundaria);font-size:14px}
-    .data{margin-top:8px;color:var(--azul);font-size:30px;font-weight:700}
-    .botao{width:100%;min-height:54px;margin-top:28px;padding:16px 20px;display:flex;align-items:center;justify-content:center;border:0;border-radius:12px;background:var(--azul);color:#fff;font-size:17px;font-weight:700;text-decoration:none;cursor:pointer}
-    .botao:hover{background:var(--azul-hover)}
-    .botao-secundario{margin-top:12px;background:#fff;color:var(--azul);border:1px solid var(--azul)}
-    .botao-secundario:hover{background:#f0f6ff}
-    .orientacao,.aviso{margin-top:16px;padding:14px;border-radius:10px;font-size:13px;line-height:1.5;text-align:left}
-    .orientacao{background:#eff6ff;color:#1e3a5f}
-    .aviso{background:var(--aviso-fundo);color:var(--aviso)}
-    .informacao{margin:20px 0 0;color:var(--secundaria);font-size:12px;line-height:1.5}
-    .erro{margin-top:24px;padding:16px;border-radius:10px;background:#fef2f2;color:var(--erro);font-size:15px;font-weight:700;line-height:1.5}
-    .oculto{display:none}
+    :root {
+      /* Paleta inspirada na identidade visual da ARC4 */
+      --azul: #203b63;
+      --azul-escuro: #162c4c;
+      --laranja: #f7a51b;
+      --laranja-hover: #e99510;
+      --texto: #21334d;
+      --secundaria: #67768a;
+      --fundo: #f1f5fa;
+      --borda: #e4eaf2;
+      --erro: #b91c1c;
+      --aviso: #92400e;
+      --aviso-fundo: #fffbeb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 26px 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--texto);
+      background: linear-gradient(160deg, #f9fbfe 0%, var(--fundo) 100%);
+    }
+
+    .pagina {
+      width: 100%;
+      min-height: calc(100vh - 52px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      max-width: 456px;
+      padding: 36px 28px 30px;
+      text-align: center;
+      background: #fff;
+      border: 1px solid var(--borda);
+      border-radius: 22px;
+      box-shadow: 0 18px 50px rgba(22, 44, 76, .10);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 5px;
+      background: var(--laranja);
+    }
+
+    .icone {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 19px;
+      padding: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+      background: #fff7e8;
+    }
+
+    .icone img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      color: var(--azul-escuro);
+      font-size: 26px;
+      line-height: 1.2;
+      letter-spacing: -.35px;
+    }
+
+    .descricao {
+      margin: 0 auto;
+      max-width: 360px;
+      color: var(--secundaria);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .data-label {
+      margin-top: 30px;
+      color: var(--secundaria);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .65px;
+      text-transform: uppercase;
+    }
+
+    .data {
+      margin-top: 9px;
+      color: var(--azul);
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -.3px;
+    }
+
+    .botao {
+      width: 100%;
+      min-height: 56px;
+      margin-top: 28px;
+      padding: 15px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+    .botao:focus-visible {
+      outline: 3px solid var(--azul);
+      outline-offset: 4px;
+    }
+
+    .botao-calendario {
+      background: var(--laranja);
+      color: var(--azul-escuro);
+      box-shadow: 0 6px 18px rgba(247, 165, 27, .20);
+      animation: pulsar 2.3s ease-in-out infinite;
+    }
+
+    .botao-calendario:hover {
+      background: var(--laranja-hover);
+      transform: translateY(-2px);
+    }
+
+    @keyframes pulsar {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(247, 165, 27, .46); }
+      55% { box-shadow: 0 0 0 12px rgba(247, 165, 27, 0); }
+    }
+
+    .apoio-titulo {
+      margin: 26px 0 0;
+      color: var(--azul-escuro);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .botao-whatsapp {
+      margin-top: 11px;
+      min-height: 52px;
+      background: #fff;
+      color: var(--azul);
+      border-color: #cbd6e5;
+      font-size: 15px;
+    }
+
+    .botao-whatsapp:hover {
+      background: #f1f6fc;
+      transform: translateY(-1px);
+    }
+
+    .botao-whatsapp svg {
+      width: 21px;
+      height: 21px;
+      flex: 0 0 21px;
+      fill: #20a85a;
+    }
+
+    .orientacao, .aviso {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.55;
+      text-align: left;
+    }
+
+    .orientacao { background: #eef4fc; color: var(--azul-escuro); }
+    .aviso { background: var(--aviso-fundo); color: var(--aviso); }
+
+    .informacao {
+      margin: 23px 0 0;
+      color: var(--secundaria);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .erro {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 10px;
+      background: #fef2f2;
+      color: var(--erro);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .rodape {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      max-width: 456px;
+      min-height: 78px;
+      padding: 18px 28px;
+      background: var(--azul-escuro);
+      border-radius: 15px;
+    }
+
+    .rodape img {
+      display: block;
+      width: 165px;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .oculto { display: none; }
+
+    @media (max-width: 380px) {
+      .card { padding: 31px 20px 25px; }
+      h1 { font-size: 23px; }
+      .data { font-size: 29px; }
+      .botao { font-size: 15px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .botao-calendario { animation: none; }
+      .botao { transition: none; }
+    }
   </style>
 </head>
 <body>
-  <main class="card">
-    <div class="icone" aria-hidden="true">📅</div>
-    <h1>Agendar vencimento</h1>
-    <p class="descricao">Adicione um lembrete do vencimento do seu boleto ao calendário.</p>
-
-    <section id="resultado" class="oculto">
-      <div class="data-label">Data do vencimento</div>
-      <div id="dataExibicao" class="data"></div>
-
-      <a id="botaoCalendario" class="botao" href="#">Adicionar ao calendário</a>
-      <a id="botaoAlternativo" class="botao botao-secundario oculto" href="#">Usar outro calendário</a>
-
-      <div id="orientacaoIOS" class="orientacao oculto">
-        <strong>Como adicionar no iPhone:</strong><br>
-        Toque no botão. Se o arquivo for baixado, abra-o em Arquivos &gt; Downloads e escolha Adicionar.
+  <div class="pagina">
+    <main class="card">
+      <div class="icone">
+        <img
+          src="https://lpbp.me/static/uploads/fa421dc28fbf7f7a4218526a534db5e9.webp"
+          alt="Ícone de lembrete de vencimento"
+          width="62"
+          height="62"
+        >
       </div>
 
-      <div id="avisoVencido" class="aviso oculto">
-        Atenção: esta data já passou. O lembrete será criado com a data original informada.
-      </div>
+      <h1>Lembrete de vencimento</h1>
+      <p class="descricao">Adicione um lembrete do vencimento do boleto do seu acordo ao calendário.</p>
 
-      <p class="informacao">Esta página cria apenas um lembrete. Ela não realiza pagamentos nem altera o vencimento do boleto.</p>
-    </section>
+      <section id="resultado" class="oculto" aria-label="Dados do vencimento">
+        <div class="data-label">Data do vencimento</div>
+        <div id="dataExibicao" class="data"></div>
 
-    <section id="mensagemErro" class="erro oculto">
-      Não foi possível identificar a data. Use o endereço no formato #AAMMDD, por exemplo: #261030.
-    </section>
-  </main>
+        <a id="botaoCalendario" class="botao botao-calendario" href="#">Adicionar ao calendário</a>
+
+        <p class="apoio-titulo">Não consegue pagar ou teve algum problema?</p>
+        <a
+          id="botaoWhatsApp"
+          class="botao botao-whatsapp"
+          href="https://api.whatsapp.com/send?phone=551152532687&amp;text=Quero%20informa%C3%A7%C3%B5es%20sobre%20o%20meu%20acordo."
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Preciso de ajuda com meu acordo. Conversar pelo WhatsApp"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.52 3.48A11.86 11.86 0 0 0 12.05 0C5.5 0 .16 5.33.16 11.89c0 2.1.55 4.16 1.61 5.98L.06 24l6.29-1.65a11.86 11.86 0 0 0 5.67 1.44h.01c6.56 0 11.9-5.34 11.91-11.9a11.84 11.84 0 0 0-3.42-8.41ZM12.03 21.8a9.85 9.85 0 0 1-5.04-1.38l-.36-.21-3.74.98 1-3.64-.24-.37A9.82 9.82 0 0 1 2.14 12c0-5.44 4.43-9.87 9.88-9.87a9.81 9.81 0 0 1 6.99 2.9 9.81 9.81 0 0 1 2.88 6.99c-.01 5.45-4.44 9.88-9.86 9.88Zm5.42-7.39c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.67-2.06-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.48-.5-.67-.5l-.57-.01c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.87 1.22 3.07c.15.2 2.1 3.2 5.09 4.48.71.31 1.27.49 1.71.63.72.23 1.37.2 1.89.12.58-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z"/>
+          </svg>
+          Preciso de ajuda com meu acordo
+        </a>
+
+        <div id="orientacaoIOS" class="orientacao oculto">
+          <strong>Como adicionar no iPhone:</strong><br>
+          Toque no botão. Se o arquivo for baixado, abra-o em Arquivos &gt; Downloads e escolha Adicionar.
+        </div>
+
+        <div id="avisoVencido" class="aviso oculto">
+          Atenção: esta data já passou. O lembrete será criado com a data original informada.
+        </div>
+
+        <p class="informacao">Esta página cria apenas um lembrete. Ela não realiza pagamentos nem altera o vencimento do boleto.</p>
+      </section>
+
+      <section id="mensagemErro" class="erro oculto" role="alert">
+        Não foi possível identificar a data. Use o endereço no formato #AAMMDD, por exemplo: #261030.
+      </section>
+    </main>
+
+    <footer class="rodape" aria-label="Bellinati Perez">
+      <img
+        src="https://portal.bellinati.com.br/assets/logo-DXK3GJ-z.png"
+        alt="Bellinati Perez"
+        width="165"
+        height="64"
+      >
+    </footer>
+  </div>
 
   <script>
     "use strict";
@@ -106,9 +367,9 @@
     function urlGoogle(data) {
       const parametros = new URLSearchParams({
         action: "TEMPLATE",
-        text: "Vencimento do boleto",
+        text: "Vencimento do boleto do acordo",
         dates: dataCompacta(data) + "/" + dataCompacta(diaSeguinte(data)),
-        details: "Lembrete da data de vencimento do seu boleto.",
+        details: "Lembrete da data de vencimento do boleto do seu acordo.",
         ctz: "America/Sao_Paulo"
       });
       return "https://calendar.google.com/calendar/render?" + parametros.toString();
@@ -130,8 +391,8 @@
         "DTSTAMP:" + carimbo,
         "DTSTART;VALUE=DATE:" + inicio,
         "DTEND;VALUE=DATE:" + fim,
-        "SUMMARY:Vencimento do boleto",
-        "DESCRIPTION:Lembrete da data de vencimento do seu boleto.",
+        "SUMMARY:Vencimento do boleto do acordo",
+        "DESCRIPTION:Lembrete da data de vencimento do boleto do seu acordo.",
         "TRANSP:TRANSPARENT",
         "STATUS:CONFIRMED",
         "END:VEVENT",
@@ -154,28 +415,21 @@
     function configurarICS(botao, data, texto) {
       botao.textContent = texto;
       botao.href = urlICS(data);
-      botao.setAttribute("download", "vencimento-boleto.ics");
+      botao.setAttribute("download", "lembrete-vencimento-acordo.ics");
       botao.removeAttribute("target");
       botao.removeAttribute("rel");
     }
 
     function configurarBotoes(data) {
       const principal = document.getElementById("botaoCalendario");
-      const alternativo = document.getElementById("botaoAlternativo");
-
       if (ehIOS()) {
         configurarICS(principal, data, "Adicionar ao Calendário do iPhone");
-        configurarGoogle(alternativo, data, "Usar Google Agenda");
         document.getElementById("orientacaoIOS").classList.remove("oculto");
       } else if (ehMac()) {
         configurarICS(principal, data, "Adicionar ao Calendário da Apple");
-        configurarGoogle(alternativo, data, "Usar Google Agenda");
       } else {
         configurarGoogle(principal, data, "Adicionar ao Google Agenda");
-        configurarICS(alternativo, data, "Usar Outlook ou outro calendário");
       }
-
-      alternativo.classList.remove("oculto");
     }
 
     function dataPassou(data) {
