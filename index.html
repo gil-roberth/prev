@@ -206,6 +206,17 @@
     }
 
     .orientacao { background: #eef4fc; color: var(--azul-escuro); }
+    .orientacao a {
+      color: #1553a2;
+      font-weight: 700;
+      text-underline-offset: 2px;
+    }
+    .orientacao .opcoes-iphone {
+      margin-top: 9px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+    }
     .aviso { background: var(--aviso-fundo); color: var(--aviso); }
 
     .informacao {
@@ -299,7 +310,13 @@
 
         <div id="orientacaoIOS" class="orientacao oculto">
           <strong>Como adicionar no iPhone:</strong><br>
-          Toque no botão. Se o arquivo for baixado, abra-o em Arquivos &gt; Downloads e escolha Adicionar.
+          Toque no botão acima para compartilhar o lembrete. Se aparecer a opção Calendário, selecione-a.
+          Se o arquivo for salvo, abra o .ics em Arquivos &gt; Downloads e tente adicioná-lo.
+          Caso esteja no navegador do WhatsApp e não abra, use "Abrir no Safari".
+          <div class="opcoes-iphone">
+            <a id="linkBaixarICS" href="#" download="lembrete-vencimento-acordo.ics">Baixar arquivo .ics</a>
+            <a id="linkGoogleIOS" href="#" target="_blank" rel="noopener noreferrer">Usar Google Agenda</a>
+          </div>
         </div>
 
         <div id="avisoVencido" class="aviso oculto">
@@ -405,8 +422,17 @@
       ].join("\r\n");
     }
 
-    function urlICS(data) {
-      return "data:text/calendar;charset=utf-8," + encodeURIComponent(conteudoICS(data));
+    // URLs de dados (.ics em data:) não são confiáveis no Safari do iPhone.
+    // Um Blob mantém o conteúdo como arquivo de calendário de verdade.
+    function criarBlobICS(data) {
+      return new Blob([conteudoICS(data)], { type: "text/calendar;charset=utf-8" });
+    }
+
+    function configurarArquivoICS(botao, data) {
+      botao.href = URL.createObjectURL(criarBlobICS(data));
+      botao.setAttribute("download", "lembrete-vencimento-acordo.ics");
+      botao.removeAttribute("target");
+      botao.removeAttribute("rel");
     }
 
     function configurarGoogle(botao, data, texto) {
@@ -419,17 +445,50 @@
 
     function configurarICS(botao, data, texto) {
       botao.textContent = texto;
-      botao.href = urlICS(data);
-      botao.setAttribute("download", "lembrete-vencimento-acordo.ics");
-      botao.removeAttribute("target");
-      botao.removeAttribute("rel");
+      configurarArquivoICS(botao, data);
+    }
+
+    function configurarIPhone(botao, data) {
+      configurarICS(botao, data, "Adicionar ao Calendário do iPhone");
+      document.getElementById("orientacaoIOS").classList.remove("oculto");
+      configurarArquivoICS(document.getElementById("linkBaixarICS"), data);
+      document.getElementById("linkGoogleIOS").href = urlGoogle(data);
+
+      // No iPhone, o compartilhamento nativo é mais útil que depender
+      // de um link data: ou de uma tentativa automática de abrir o .ics.
+      // Quando não existe suporte, o próprio href Blob baixa o arquivo.
+      let arquivo = null;
+      let podeCompartilhar = false;
+      if (typeof File === "function" && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+        arquivo = new File([conteudoICS(data)], "lembrete-vencimento-acordo.ics", { type: "text/calendar" });
+        try { podeCompartilhar = navigator.canShare({ files: [arquivo] }); }
+        catch (erro) { podeCompartilhar = false; }
+      }
+
+      if (podeCompartilhar) {
+        botao.addEventListener("click", async function(evento) {
+          evento.preventDefault();
+          try {
+            await navigator.share({
+              files: [arquivo],
+              title: "Lembrete de vencimento do acordo"
+            });
+          } catch (erro) {
+            // Cancelar a folha de compartilhamento não deve disparar download.
+            // Se o compartilhamento falhar, o link "Baixar arquivo .ics"
+            // permanece disponível, assim como o Google Agenda.
+            if (erro && erro.name !== "AbortError") {
+              document.getElementById("linkBaixarICS").focus();
+            }
+          }
+        });
+      }
     }
 
     function configurarBotoes(data) {
       const principal = document.getElementById("botaoCalendario");
       if (ehIOS()) {
-        configurarICS(principal, data, "Adicionar ao Calendário do iPhone");
-        document.getElementById("orientacaoIOS").classList.remove("oculto");
+        configurarIPhone(principal, data);
       } else if (ehMac()) {
         configurarICS(principal, data, "Adicionar ao Calendário da Apple");
       } else {
